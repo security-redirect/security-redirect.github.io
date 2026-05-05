@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Redirect - URL Shortener</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 650px;
+            width: 100%;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo h1 {
+            font-size: 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            font-family: monospace;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .result {
+            margin-top: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .short-url {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .short-url input {
+            flex: 1;
+            background: white;
+            font-family: monospace;
+        }
+
+        .copy-btn {
+            width: auto;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .links-list {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .link-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .link-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .link-url {
+            font-family: monospace;
+            font-size: 12px;
+            color: #667eea;
+            text-decoration: none;
+            word-break: break-all;
+            flex: 1;
+        }
+
+        .link-clicks {
+            font-size: 12px;
+            color: #666;
+            margin-left: 10px;
+        }
+
+        .delete-link {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 11px;
+            margin-left: 10px;
+        }
+
+        .api-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e7f3ff;
+            border-radius: 10px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+
+        .api-info code {
+            background: #d4d4d4;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            .short-url {
+                flex-direction: column;
+            }
+            .copy-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>🔗 Security Redirect</h1>
+            <p>Instant URL Shortener - 301 Permanent Redirects</p>
+        </div>
+
+        <div id="alert" class="alert"></div>
+
+        <div class="input-group">
+            <label>🔗 Long URL to shorten</label>
+            <textarea id="longUrl" rows="2" placeholder="https://example.com/very/long/url/that/needs/shortening..."></textarea>
+        </div>
+
+        <div class="input-group">
+            <label>🎯 Custom alias (optional)</label>
+            <input type="text" id="customAlias" placeholder="my-custom-link (letters, numbers, -, _)">
+        </div>
+
+        <button onclick="createShortLink()">✨ Create Short Link</button>
+
+        <div id="result" class="result">
+            <div class="short-url">
+                <input type="text" id="shortUrl" readonly>
+                <button class="copy-btn" onclick="copyToClipboard()">📋 Copy</button>
+            </div>
+            <div id="shortLinkInfo"></div>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="totalLinks">0</div>
+                <div class="stat-label">Total Links</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="totalClicks">0</div>
+                <div class="stat-label">Total Clicks</div>
+            </div>
+        </div>
+
+        <div id="linksList" class="links-list"></div>
+
+        <div class="api-info">
+            <strong>📡 API Endpoints (for your selfbot):</strong><br>
+            <code>GET /api/shorten?url=YOUR_URL</code> - Create short link<br>
+            <code>GET /api/shorten?url=YOUR_URL&alias=custom</code> - With custom alias<br>
+            <code>GET /api/stats</code> - Get link statistics<br>
+            <code>GET /{alias}</code> - Instant redirect
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'security_redirect_data';
+        let links = [];
+
+        function loadData() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                links = JSON.parse(saved);
+            } else {
+                links = [
+                    { id: '1', alias: 'github', url: 'https://github.com', clicks: 0, created: Date.now() },
+                    { id: '2', alias: 'discord', url: 'https://discord.com', clicks: 0, created: Date.now() }
+                ];
+                saveData();
+            }
+            updateStats();
+            renderLinksList();
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
+        }
+
+        function generateId() {
+            return Math.random().toString(36).substring(2, 8);
+        }
+
+        function isValidAlias(alias) {
+            return /^[a-zA-Z0-9_-]+$/.test(alias);
+        }
+
+        function aliasExists(alias) {
+            return links.some(link => link.alias === alias);
+        }
+
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type} show`;
+            alert.textContent = message;
+            setTimeout(() => {
+                alert.classList.remove('show');
+            }, 3000);
+        }
+
+        function updateStats() {
+            document.getElementById('totalLinks').textContent = links.length;
+            const totalClicks = links.reduce((sum, link) => sum + (link.clicks || 0), 0);
+            document.getElementById('totalClicks').textContent = totalClicks;
+        }
+
+        function renderLinksList() {
+            const container = document.getElementById('linksList');
+            const baseUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}`.replace(/\/[^\/]*$/, '/');
+            
+            if (links.length === 0) {
+                container.innerHTML = '<div style="text-align:center;color:#666;padding:20px;">No links yet. Create your first short link!</div>';
+                return;
+            }
+            
+            container.innerHTML = links.map(link => `
+                <div class="link-item">
+                    <a href="${baseUrl}${link.alias}" class="link-url" target="_blank">/${link.alias}</a>
+                    <span class="link-clicks">${link.clicks || 0} clicks</span>
+                    <button class="delete-link" onclick="deleteLink('${link.alias}')">🗑️</button>
+                </div>
+            `).join('');
+        }
+
+        function deleteLink(alias) {
+            links = links.filter(link => link.alias !== alias);
+            saveData();
+            updateStats();
+            renderLinksList();
+            showAlert('Link deleted successfully!', 'success');
+        }
+
+        function copyToClipboard() {
+            const input = document.getElementById('shortUrl');
+            input.select();
+            document.execCommand('copy');
+            showAlert('Copied to clipboard!', 'success');
+        }
+
+        function createShortLink() {
+            const longUrl = document.getElementById('longUrl').value.trim();
+            let customAlias = document.getElementById('customAlias').value.trim();
+            
+            if (!longUrl) {
+                showAlert('Please enter a URL to shorten', 'error');
+                return;
+            }
+            
+            let finalUrl = longUrl;
+            if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+                finalUrl = 'https://' + finalUrl;
+            }
+            
+            if (customAlias) {
+                if (!isValidAlias(customAlias)) {
+                    showAlert('Alias can only contain letters, numbers, hyphens, and underscores', 'error');
+                    return;
+                }
+                if (aliasExists(customAlias)) {
+                    showAlert('This alias is already taken. Please choose another one.', 'error');
+                    return;
+                }
+            } else {
+                customAlias = generateId();
+                while (aliasExists(customAlias)) {
+                    customAlias = generateId();
+                }
+            }
+            
+            const newLink = {
+                id: generateId(),
+                alias: customAlias,
+                url: finalUrl,
+                clicks: 0,
+                created: Date.now()
+            };
+            
+            links.push(newLink);
+            saveData();
+            
+            const baseUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}`.replace(/\/[^\/]*$/, '/');
+            const shortUrl = `${baseUrl}${customAlias}`;
+            document.getElementById('shortUrl').value = shortUrl;
+            document.getElementById('shortLinkInfo').innerHTML = `
+                <div style="font-size: 12px; color: #666; margin-top: 10px;">
+                    🎉 Link created!<br>
+                    📍 Redirects to: ${finalUrl.substring(0, 60)}${finalUrl.length > 60 ? '...' : ''}<br>
+                    🔗 ${shortUrl}
+                </div>
+            `;
+            document.getElementById('result').classList.add('show');
+            
+            document.getElementById('longUrl').value = '';
+            document.getElementById('customAlias').value = '';
+            
+            updateStats();
+            renderLinksList();
+            showAlert('Short link created successfully!', 'success');
+        }
+
+        function handleAPIRequest() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const apiPath = window.location.pathname;
+            
+            if (apiPath.includes('/api/shorten')) {
+                const url = urlParams.get('url');
+                const alias = urlParams.get('alias');
+                
+                if (!url) {
+                    document.body.innerHTML = JSON.stringify({ error: 'Missing url parameter' }, null, 2);
+                    return;
+                }
+                
+                let finalUrl = url;
+                if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+                    finalUrl = 'https://' + finalUrl;
+                }
+                
+                let customAlias = alias;
+                if (customAlias && !isValidAlias(customAlias)) {
+                    document.body.innerHTML = JSON.stringify({ error: 'Invalid alias format' }, null, 2);
+                    return;
+                }
+                
+                if (!customAlias) {
+                    customAlias = generateId();
+                    while (aliasExists(customAlias)) {
+                        customAlias = generateId();
+                    }
+                } else if (aliasExists(customAlias)) {
+                    document.body.innerHTML = JSON.stringify({ error: 'Alias already taken' }, null, 2);
+                    return;
+                }
+                
+                const newLink = {
+                    id: generateId(),
+                    alias: customAlias,
+                    url: finalUrl,
+                    clicks: 0,
+                    created: Date.now()
+                };
+                
+                links.push(newLink);
+                saveData();
+                
+                const baseUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}`.replace(/\/[^\/]*$/, '/');
+                const shortUrl = `${baseUrl}${customAlias}`;
+                
+                document.body.innerHTML = JSON.stringify({
+                    success: true,
+                    short_url: shortUrl,
+                    alias: customAlias,
+                    original_url: finalUrl
+                }, null, 2);
+                return;
+            }
+            
+            if (apiPath.includes('/api/stats')) {
+                const stats = links.map(link => ({
+                    alias: link.alias,
+                    url: link.url,
+                    clicks: link.clicks,
+                    created: new Date(link.created).toISOString()
+                }));
+                document.body.innerHTML = JSON.stringify({
+                    total_links: links.length,
+                    total_clicks: links.reduce((sum, l) => sum + (l.clicks || 0), 0),
+                    links: stats
+                }, null, 2);
+                return;
+            }
+            
+            const alias = apiPath.substring(1);
+            if (alias && alias !== '' && !alias.includes('api') && !alias.includes('.html') && !alias.includes('?') && alias !== 'index.html') {
+                const link = links.find(l => l.alias === alias);
+                if (link) {
+                    link.clicks = (link.clicks || 0) + 1;
+                    saveData();
+                    window.location.href = link.url;
+                    return;
+                }
+            }
+        }
+
+        loadData();
+
+        if (window.location.pathname.includes('/api/') || (window.location.pathname !== '/' && window.location.pathname !== '/index.html' && !window.location.pathname.includes('.'))) {
+            handleAPIRequest();
+        }
+
+        document.getElementById('longUrl').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                createShortLink();
+            }
+        });
+
+        document.getElementById('customAlias').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                createShortLink();
+            }
+        });
+    </script>
+</body>
+</html>
